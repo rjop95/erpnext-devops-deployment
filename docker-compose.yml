@@ -1,0 +1,69 @@
+
+
+# Esta sección define dependencias reutilizables para no repetir código
+x-depends-on-config: &depends_on_config
+  depends_on:
+    db:
+      condition: service_healthy
+    redis-cache:
+      condition: service_started
+    redis-queue:
+      condition: service_started
+
+services:
+  # 1. Base de Datos (MariaDB configurada específicamente para ERPNext)
+  db:
+    image: mariadb:10.6
+    healthcheck:
+      test: mysqladmin ping -h localhost --password=admin
+      interval: 1s
+      retries: 15
+    environment:
+      - MYSQL_ROOT_PASSWORD=admin
+    volumes:
+      - db-data:/var/lib/mysql
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --skip-character-set-client-handshake
+      - --skip-innodb-read-only-compressed
+
+  # 2. Caché y Colas de tareas (Redis)
+  redis-cache:
+    image: redis:6.2-alpine
+
+  redis-queue:
+    image: redis:6.2-alpine
+
+  # 3. Backend (La lógica en Python/Frappe)
+  backend:
+    image: frappe/erpnext:v15.23.1
+    <<: *depends_on_config
+    environment:
+      - DB_HOST=db
+      - DB_PORT=3306
+      - REDIS_CACHE=redis-cache:6379
+      - REDIS_QUEUE=redis-queue:6379
+    volumes:
+      - sites:/home/frappe/frappe-bench/sites
+
+  # 4. Frontend (Nginx que sirve la web y se comunica con el backend)
+  frontend:
+    image: frappe/erpnext:v15.23.1
+    command: nginx-entrypoint.sh
+    <<: *depends_on_config
+    environment:
+      - BACKEND=backend:8000
+      - FRAPPE_SITE_NAME_HEADER=erpnext.localhost
+      - UPSTREAM_REAL_IP_ADDRESS=127.0.0.1
+      - UPSTREAM_REAL_IP_HEADER=X-Forwarded-For
+      - UPSTREAM_REAL_IP_RECURSIVE=off
+    ports:
+      - "8080:8080"
+    volumes:
+      - sites:/home/frappe/frappe-bench/sites
+
+# 5. Volúmenes persistentes (Para no perder datos si se apaga el contenedor)
+volumes:
+  db-data:
+  sites:

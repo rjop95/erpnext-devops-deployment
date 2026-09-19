@@ -1,0 +1,19 @@
+# Archivos de entorno y credenciales
+.env
+*.env.local
+*.key
+*.pem
+
+# Residuos de Docker y Compose
+.docker/
+docker-compose.override.yml
+
+# Archivos de sistema y editores
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Sitios y datos temporales locales
+sites/
+sites/*
