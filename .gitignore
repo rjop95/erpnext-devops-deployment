@@ -17,3 +17,10 @@ Thumbs.db
 # Sitios y datos temporales locales
 sites/
 sites/*
+
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+*.tfvars
